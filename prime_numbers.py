@@ -1,31 +1,57 @@
-import random
-import psutil
+from random import randrange, getrandbits, randint
 
-from temperature import get_cpu_temperature
+def power(a, d, n):
+    ans = 1
+    while d != 0:
+        if d % 2 == 1:
+            ans = ((ans % n) * (a % n)) % n
+        a = ((a % n) * (a % n)) % n
+        d >>= 1
+    return ans
 
-def is_prime(n):
-    if n <= 1:
-        return False
-    if n <= 3:
+
+def MillerRabin(N, d):
+    a = randrange(2, N - 1)
+    x = power(a, d, N)
+    if x == 1 or x == N - 1:
         return True
-    if n % 2 == 0 or n % 3 == 0:
+    else:
+        while d != N - 1:
+            x = ((x % N) * (x % N)) % N
+            if x == 1:
+                return False
+            if x == N - 1:
+                return True
+            d <<= 1
+    return False
+
+
+def is_prime(N, K):
+    if N == 3 or N == 2:
+        return True
+    if N <= 1 or N % 2 == 0:
         return False
-    i = 5
-    while i * i <= n:
-        if n % i == 0 or n % (i + 2) == 0:
+    d = N - 1
+    while d % 2 != 0:
+        d /= 2
+
+    for _ in range(K):
+        if not MillerRabin(N, d):
             return False
-        i += 6
     return True
 
-def find_big_primes(start, end):
-    primes = []
-    if start % 2 == 0:
-        start += 1
-    for num in range(start, end + 1, 2):
-        if is_prime(num):
-            primes.append(num)
-            if len(primes) == 2:
-                return primes[0], primes[1]
+
+def generate_prime_candidate(length):
+    p = getrandbits(length)
+    p |= (1 << length - 1) | 1
+    return p
+
+
+def generatePrimeNumber(length):
+    A = 4
+    while not is_prime(A, 128):
+        A = generate_prime_candidate(length)
+    return A
 
 def gcd(a, b):
     while b != 0:
@@ -45,15 +71,15 @@ def mod_inverse(e, phi):
         raise Exception('modular inverse does not exist')
     else:
         return x % phi
-    
+
 def generate_keypair():
-    random_int = random.randint(1, 1024) * 10**3 + get_cpu_temperature()
-    p, q = find_big_primes(random_int, random_int + 10000)
-    print(f"p = {p}, q = {q}")
+    length = 15  # Decrease the length of the prime numbers
+    p = generatePrimeNumber(length)
+    q = generatePrimeNumber(length)    
     n = p * q
     phi = (p - 1) * (q - 1)
-    e = random.randint(2, phi - 1)
+    e = randint(2, phi - 1)
     while gcd(e, phi) != 1:
-        e = random.randint(2, phi)
+        e = randint(2, phi)
     d = mod_inverse(e, phi)
     return ((e, n), (d, n))
