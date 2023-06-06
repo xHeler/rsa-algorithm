@@ -1,6 +1,9 @@
-import random
 import struct
+import secrets
+import rsa
 
+p = 0
+q = 0
 
 # Miller-Rabin primality test
 def is_prime(n, k=5):
@@ -14,7 +17,7 @@ def is_prime(n, k=5):
         r += 1
         s //= 2
     for _ in range(k):
-        a = random.randrange(2, n - 1)
+        a = secrets.randbelow(n - 1) + 1
         x = pow(a, s, n)
         if x == 1 or x == n - 1:
             continue
@@ -29,7 +32,7 @@ def is_prime(n, k=5):
 
 def generate_large_prime(bits):
     while True:
-        p = random.getrandbits(bits)
+        p = secrets.randbits(bits)
         if is_prime(p):
             return p
 
@@ -51,8 +54,11 @@ def mod_inverse(a, m):
 
 
 def generate_keypair(bits):
+    global p
+    global q
     p = generate_large_prime(bits // 2)
     q = generate_large_prime(bits // 2)
+    
     n = p * q
     phi = (p - 1) * (q - 1)
     e = 65537
@@ -74,6 +80,27 @@ def decrypt(sk, ciphertext):
 KEY_SIZE = 128
 public_key, private_key = generate_keypair(KEY_SIZE)
 
+# Extract public key components
+e, n = public_key
+
+# Extract private key components
+d, n = private_key
+
+# Convert keys to rsa package's format
+public_key_rsa = rsa.PublicKey(n, e)
+private_key_rsa = rsa.PrivateKey(n, e, d, p, q)  # p, q, exp1, exp2, and coef are not used
+
+# Export keys to PEM format
+public_key_pem = public_key_rsa.save_pkcs1().decode()
+private_key_pem = private_key_rsa.save_pkcs1().decode()
+
+# Print the keys
+print("Public Key:")
+print(public_key_pem)
+print()
+print("Private Key:")
+print(private_key_pem)
+
 # Load the encrypted data from the file
 encrypted_file_path = "data/test.bmp"
 with open(encrypted_file_path, 'rb') as f:
@@ -84,7 +111,7 @@ with open(encrypted_file_path, 'rb') as f:
 encrypted_data = encrypt(public_key, data)
 
 # Save the encrypted data to a BMP file
-encrypted_file_path = "rsa/encrypted.bmp"
+encrypted_file_path = "rsa_own/encrypted.bmp"
 with open(encrypted_file_path, 'wb') as f:
     f.write(bmp_file_header)
     f.write(bmp_info_header)
@@ -96,7 +123,7 @@ with open(encrypted_file_path, 'wb') as f:
             val >>= 32  # Shift the value right by 32 bits
 
 decrypted_data = decrypt(private_key, encrypted_data)
-decrypted_file_path = "rsa/decrypted.bmp"
+decrypted_file_path = "rsa_own/decrypted.bmp"
 with open(decrypted_file_path, 'wb') as f:
     f.write(bmp_file_header)
     f.write(bmp_info_header)
