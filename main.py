@@ -71,7 +71,7 @@ def decrypt(sk, ciphertext):
 
 
 # Generate RSA keys
-KEY_SIZE = 16
+KEY_SIZE = 128
 public_key, private_key = generate_keypair(KEY_SIZE)
 
 # Load the encrypted data from the file
@@ -83,13 +83,17 @@ with open(encrypted_file_path, 'rb') as f:
 
 encrypted_data = encrypt(public_key, data)
 
+# Save the encrypted data to a BMP file
 encrypted_file_path = "encrypted.bmp"
 with open(encrypted_file_path, 'wb') as f:
     f.write(bmp_file_header)
     f.write(bmp_info_header)
-    f.write(struct.pack('I', len(encrypted_data) * 4))  # Write the size of the data in bytes
+    f.write(struct.pack('I', len(encrypted_data)))  # Write the size of the data in 4-byte chunks
     for val in encrypted_data:
-        f.write(struct.pack('I', val))
+        while val > 0:
+            chunk = val & 0xFFFFFFFF  # Get the lowest 32 bits of the value
+            f.write(struct.pack('!I', chunk))
+            val >>= 32  # Shift the value right by 32 bits
 
 decrypted_data = decrypt(private_key, encrypted_data)
 decrypted_file_path = "decrypted.bmp"
